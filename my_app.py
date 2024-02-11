@@ -1,14 +1,13 @@
+import streamlit as st
+from streamlit_option_menu import option_menu
 import easyocr
 from PIL import Image
 import pandas as pd
 import numpy as np
 import re
 import io
-import streamlit as st
-from streamlit_option_menu import option_menu
 import sqlite3
 from sqlalchemy import create_engine
-
 
 def image_to_text(path):
 
@@ -18,9 +17,8 @@ def image_to_text(path):
     image_arr= np.array(input_img)
 
     reader= easyocr.Reader(['en'])
-    text= reader.readtext(image_arr, detail=0)
+    text= reader.readtext(image_arr,detail= 0)
     return text,input_img
-
 
 def extracted_text(texts):
     extrd_dict = {"NAME":[],"DESIGNATION":[],"COMPANY_NAME":[],"CONTACT":[],"EMAIL":[],
@@ -60,7 +58,6 @@ def extracted_text(texts):
 
     return extrd_dict
 
-
 # Streamlit Part
 
 st.set_page_config(layout= "wide")
@@ -70,10 +67,10 @@ st.write("")
 
 
 with st.sidebar:
-  select= option_menu("Mani Menu",["Home", "Upload & Modifying", "Delete"])
+  select= option_menu("Main Menu",["Home", "Upload&Modify", "Delete"])
 
 if select == "Home":
-  st.markdown("### :green[**Technologies Used :**] Python,easy OCR, Streamlit, SQL, Pandas")
+  st.markdown("### :blue[**Technologies Used :**] Python,easy OCR, Streamlit, SQL, Pandas")
 
 
 
@@ -82,8 +79,7 @@ if select == "Home":
   st.write(
             '### The main purpose of Bizcard is to automate the process of extracting key details from business card images, such as the name, designation, company, contact information, and other relevant data. By leveraging the power of OCR (Optical Character Recognition) provided by EasyOCR, Bizcard is able to extract text from the images.')
 
-
-elif select == "Upload & Modifying":
+elif select == "Upload&Modify":
 
   img= st.file_uploader("Upload the Image", type= ["png", "jpg", "jpeg"], label_visibility= "hidden")
 
@@ -91,38 +87,11 @@ elif select == "Upload & Modifying":
     st.image(img,width= 300)
 
     text_image,input_img= image_to_text(img)
-
     text_dict= extracted_text(text_image)
 
     if text_dict:
       st.success("TEXT IS EXTRACTED SUCCESSFULLY")
 
-  method= st.radio("Select the Option",["None","Preview","Modify"])
-
-  if method == "None":
-    st.write("")
-
-  if method == "Preview":
-
-    df= pd.DataFrame(text_dict)
-
-    #Converting Image to Bytes
-    Image_bytes= io.BytesIO()
-    input_img.save(Image_bytes,format= "PNG")
-
-    image_data= Image_bytes.getvalue()
-
-    #Creating dictionary
-    data= {"Image":[image_data]}
-    df_1= pd.DataFrame(data)
-
-    concat_df= pd.concat([df,df_1],axis=1)
-    st.image(input_img, width = 350)
-    st.dataframe(concat_df)
-
-  
-  if method == "Modify":
-    col1,col2= st.columns(2)
 
     df= pd.DataFrame(text_dict)
 
@@ -138,39 +107,14 @@ elif select == "Upload & Modifying":
 
     concat_df= pd.concat([df,df_1],axis=1)
 
-    with col1:
-      modify_name= st.text_input("Name", text_dict["NAME"][0])
-      modify_desig= st.text_input("Designation", text_dict["DESIGNATION"][0])
-      modify_company= st.text_input("Company_Name", text_dict["COMPANY_NAME"][0])
-      modify_contact= st.text_input("Contact", text_dict["CONTACT"][0])
-
-      concat_df["NAME"] = modify_name
-      concat_df["DESIGNATION"] = modify_desig
-      concat_df["COMPANY_NAME"] = modify_company
-      concat_df["CONTACT"] = modify_contact
-
-    with col2:
-      modify_email= st.text_input("Email", text_dict["EMAIL"][0])
-      modify_web= st.text_input("Website", text_dict["WEBSITE"][0])
-      modify_address= st.text_input("Address", text_dict["ADDRESS"][0])
-      modify_pincode= st.text_input("Pincode", text_dict["PINCODE"][0])
-
-      concat_df["EMAIL"] = modify_email
-      concat_df["WEBSITE"] = modify_web
-      concat_df["ADDRESS"] = modify_address
-      concat_df["PINCODE"] = modify_pincode
-
-    col1,col2= st.columns(2)
-    with col1:
-      button3= st.button("Save",use_container_width= True)
+    button3= st.button("Save",use_container_width= True)
 
     if button3:
         conn = sqlite3.connect('bizcardx.db')
 
         table_name = 'bizcard_details'
         columns = concat_df.columns.tolist()
-
-        # Define the table creation query
+     # Define the table creation query
         create_table_query = '''
         CREATE TABLE IF NOT EXISTS {} (
             NAME varchar(225),
@@ -187,7 +131,6 @@ elif select == "Upload & Modifying":
         conn.execute(create_table_query)
         conn.commit()
 
-               
         for index, row in concat_df.iterrows():
             insert_query = '''
                     INSERT INTO {} ({})
@@ -202,14 +145,135 @@ elif select == "Upload & Modifying":
             # Commit the changes
             conn.commit()
 
-            query = 'SELECT * FROM {}'.format(table_name)
+  method= st.radio("Select the Option",["None","Preview","Modify"])
+  if method == "None":
+    st.write("")
 
-            df_from_sqlite = pd.read_sql_query(query, conn)
 
-            st.dataframe(df_from_sqlite)
+  if method == "Preview":
 
-            if st.dataframe:
-              st.success("Saved Successfully")
+    df= pd.DataFrame(text_dict)
+
+    #Converting Image to Bytes
+    Image_bytes= io.BytesIO()
+    input_img.save(Image_bytes,format= "PNG")
+    image_data= Image_bytes.getvalue()
+
+    #Creating dictionary
+    data= {"Image":[image_data]}
+    df_1= pd.DataFrame(data)
+
+    concat_df= pd.concat([df,df_1],axis=1)
+    st.image(input_img, width = 350)
+    st.dataframe(concat_df)
+
+  elif method == "Modify":
+
+    
+    df= pd.DataFrame(text_dict)
+
+    #Converting Image to Bytes
+    Image_bytes= io.BytesIO()
+    input_img.save(Image_bytes,format= "PNG")
+    image_data= Image_bytes.getvalue()
+
+    #Creating dictionary
+    data= {"Image":[image_data]}
+    df_1= pd.DataFrame(data)
+    concat_df= pd.concat([df,df_1],axis=1)
+
+    conn = sqlite3.connect('bizcardx.db')
+    cursor = conn.cursor()
+    
+    query= "select * from bizcard_details"
+    cursor.execute(query)
+    
+    table = cursor.fetchall()
+    conn.commit()
+
+    df3= pd.DataFrame(table, columns= ["NAME","DESIGNATION","COMPANY_NAME","CONTACT",
+                                      "EMAIL","WEBSITE","ADDRESS","PINCODE","IMAGE"])
+
+    st.dataframe(df3)
+
+    col1,col2= st.columns(2)
+    with col1:
+      select_name = st.selectbox("Select the Name",df3["NAME"])
+    
+    df4 = df3[df3["NAME"]==select_name]
+    st.write("")
+
+    col1,col2= st.columns(2)
+    with col1:
+        modify_name= st.text_input("Name", df4["NAME"].unique()[0])
+        modify_desig= st.text_input("Designation", df4["DESIGNATION"].unique()[0])
+        modify_company= st.text_input("Company_Name", df4["COMPANY_NAME"].unique()[0])
+        modify_contact= st.text_input("Contact", df4["CONTACT"].unique()[0])
+
+        concat_df["NAME"] = modify_name
+        concat_df["DESIGNATION"] = modify_desig
+        concat_df["COMPANY_NAME"] = modify_company
+        concat_df["CONTACT"] = modify_contact
+
+    with col2:
+        modify_email= st.text_input("Email", df4["EMAIL"].unique()[0])
+        modify_web= st.text_input("Website", df4["WEBSITE"].unique()[0])
+        modify_address= st.text_input("Address", df4["ADDRESS"].unique()[0])
+        modify_pincode= st.text_input("Pincode", df4["PINCODE"].unique()[0])
+
+        concat_df["EMAIL"] = modify_email
+        concat_df["WEBSITE"] = modify_web
+        concat_df["ADDRESS"] = modify_address
+        concat_df["PINCODE"] = modify_pincode
+
+    col1,col2= st.columns(2)
+    with col1:
+      button3= st.button("Modify",use_container_width= True)
+
+    if button3:
+      conn = sqlite3.connect('bizcardx.db')
+      cursor = conn.cursor()
+
+
+      cursor.execute(f"DELETE FROM bizcard_details WHERE NAME ='{select_name}'")
+      conn.commit()
+
+      for index, row in concat_df.iterrows():
+          insert_query = '''
+                  INSERT INTO bizcard_details ("NAME","DESIGNATION","COMPANY_NAME","CONTACT",
+                                      "EMAIL","WEBSITE","ADDRESS","PINCODE","IMAGE")
+          VALUES (?,?,?,?,?,?,?,?,?)
+          '''
+          values= (row['NAME'], row['DESIGNATION'], row['COMPANY_NAME'], row['CONTACT'],
+                  row['EMAIL'], row['WEBSITE'], row['ADDRESS'], row['PINCODE'],row["Image"])
+
+          # Execute the insert query
+          conn.execute(insert_query,values)
+
+          # Commit the changes
+          conn.commit()
+
+
+      conn = sqlite3.connect('bizcardx.db')
+      cursor = conn.cursor()
+      
+      query= "select * from bizcard_details"
+      cursor.execute(query)
+      
+      table = cursor.fetchall()
+      conn.commit()
+
+      df6= pd.DataFrame(table, columns= ["NAME","DESIGNATION","COMPANY_NAME","CONTACT",
+                                        "EMAIL","WEBSITE","ADDRESS","PINCODE","IMAGE"])
+
+      st.dataframe(df6)
+
+      st.success("MODIFIED SUCCESSFULLY")
+
+
+
+        
+
 
 if select == "Delete":
 
@@ -228,7 +292,7 @@ if select == "Delete":
       names.append(i[0])
 
     name_select= st.selectbox("Select the Name",options= names)
-  
+
   with col2:
     cursor.execute(f"SELECT DESIGNATION FROM bizcard_details WHERE NAME ='{name_select}'")
     conn.commit()
@@ -263,6 +327,3 @@ if select == "Delete":
         conn.commit()
 
         st.warning("DELETED")
-
-
-
